@@ -44,33 +44,8 @@ _IMAGE_MIMES = {
     ".bmp": "image/bmp",
 }
 
-# Greeting patterns for auto-reaction
-_GREETINGS = {
-    "hello",
-    "hi",
-    "hey",
-    "hola",
-    "مرحبا",
-    "هلا",
-    "هلاو",
-    "هاي",
-    "أهلا",
-    "السلام",
-    "سلام",
-    "صباح",
-    "مساء",
-    "اهلا",
-    "اهلين",
-    "yo",
-    "sup",
-    "good morning",
-    "good evening",
-}
-
-# Reaction emoji sets
-_GREETING_EMOJIS = ["❤️", "👋", "😊"]
+# Reaction emoji sets (greeting reactions are handled by the AI via send_reaction tool)
 _COMPLETION_EMOJIS = ["👍", "✅", "❤️"]
-_ERROR_EMOJIS = ["😔"]
 
 
 class TelegramGateway:
@@ -369,18 +344,7 @@ class TelegramGateway:
             self._register_reaction_tool(agent, message.chat.id, message.id)
             typing_task = asyncio.create_task(self._typing_loop(message.chat.id))
 
-            # Auto-react on greeting
             reaction_mode = self._cfg.get("gateway.reaction_mode")
-            if reaction_mode:
-                text_lower = message.text.strip().lower()
-                is_greeting = any(g in text_lower for g in _GREETINGS)
-                if is_greeting or reaction_mode == "massive":
-                    import random
-
-                    emoji = random.choice(
-                        _GREETING_EMOJIS if is_greeting else ["👀", "⚡", "🔥"]
-                    )
-                    await self._react(message.chat.id, message.id, emoji)
 
             # Track this as the running task for /stop
             current_task = asyncio.current_task()
