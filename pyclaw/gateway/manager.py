@@ -78,15 +78,16 @@ class GatewayManager:
         """
         pid = GatewayManager._read_pid()
         # Even if PID file missing, try to cleanup orphans if requested by user context?
-        # But here we stick to regular flow. 
+        # But here we stick to regular flow.
         # If PID missing, we return False usually.
         # But to be robust, we should run cleanup if user says 'stop'.
-        
+
         if pid:
             try:
                 os.kill(pid, signal.SIGTERM)
                 # Wait for process to exit
                 import time
+
                 for _ in range(30):  # 3 seconds timeout
                     try:
                         os.kill(pid, 0)
@@ -100,7 +101,7 @@ class GatewayManager:
         GatewayManager._cleanup_orphans()
 
         _PID_FILE.unlink(missing_ok=True)
-        
+
         if pid:
             return True, f"gateway stopped (pid {pid})"
         # If no PID but we ran cleanup, say stopped?
@@ -130,11 +131,14 @@ class GatewayManager:
     def _cleanup_orphans() -> None:
         """Kill any lingering gateway processes."""
         try:
-             subprocess.run(["pkill", "-f", "pyclaw.gateway._runner"], capture_output=True)
-             import time
-             time.sleep(0.5)
+            subprocess.run(
+                ["pkill", "-f", "pyclaw.gateway._runner"], capture_output=True
+            )
+            import time
+
+            time.sleep(0.5)
         except Exception:
-             pass
+            pass
 
     # ── Internals ───────────────────────────────────────────────────
 

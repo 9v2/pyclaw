@@ -24,7 +24,9 @@ async def _show_config() -> None:
     cfg = await Config.load()
     raw = json.dumps(cfg.data, indent=2, default=str)
     syntax = Syntax(raw, "json", theme="monokai", line_numbers=True)
-    console.print(Panel(syntax, title="~/.pyclaw/config.json", border_style="bright_cyan"))
+    console.print(
+        Panel(syntax, title="~/.pyclaw/config.json", border_style="bright_cyan")
+    )
 
 
 async def _open_config() -> None:

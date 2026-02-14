@@ -6,9 +6,14 @@ from typing import Any
 
 from pyclaw.agent.tools import Tool
 from pyclaw.agent.identity import (
-    write_soul, append_user, append_memory, write_daily_note,
-    read_soul, read_user, read_memory, list_recent_memories,
-    SOUL_PATH, USER_PATH, MEMORY_PATH, MEMORY_DIR
+    write_soul,
+    append_user,
+    append_memory,
+    write_daily_note,
+    SOUL_PATH,
+    USER_PATH,
+    MEMORY_PATH,
+    MEMORY_DIR,
 )
 
 
@@ -80,6 +85,7 @@ class UpdateUserTool(Tool):
             # verify we have path access
             from pyclaw.agent.identity import USER_PATH
             import aiofiles
+
             async with aiofiles.open(USER_PATH, "w") as f:
                 await f.write(content)
             return "USER.md rewritten successfully."
@@ -121,6 +127,7 @@ class UpdateMemoryTool(Tool):
         else:
             from pyclaw.agent.identity import MEMORY_PATH
             import aiofiles
+
             async with aiofiles.open(MEMORY_PATH, "w") as f:
                 await f.write(content)
             return "MEMORY.md rewritten successfully."
@@ -139,7 +146,18 @@ class ReadIdentityTool(Tool):
                 "properties": {
                     "file": {
                         "type": "string",
-                        "enum": ["soul", "user", "memory", "identity", "agents", "boot", "bootstrap", "heartbeat", "tools", "daily"],
+                        "enum": [
+                            "soul",
+                            "user",
+                            "memory",
+                            "identity",
+                            "agents",
+                            "boot",
+                            "bootstrap",
+                            "heartbeat",
+                            "tools",
+                            "daily",
+                        ],
                         "description": "Which file to read. 'daily' reads today's note.",
                     },
                 },
@@ -149,10 +167,14 @@ class ReadIdentityTool(Tool):
 
     async def execute(self, file: str, **_: Any) -> str:
         from pyclaw.agent.identity import (
-            SOUL_PATH, USER_PATH, MEMORY_PATH, IDENTITY_PATH, 
-            AGENTS_PATH, BOOT_PATH, BOOTSTRAP_PATH, HEARTBEAT_PATH, TOOLS_PATH
+            IDENTITY_PATH,
+            AGENTS_PATH,
+            BOOT_PATH,
+            BOOTSTRAP_PATH,
+            HEARTBEAT_PATH,
+            TOOLS_PATH,
         )
-        
+
         mapping = {
             "soul": SOUL_PATH,
             "user": USER_PATH,
@@ -162,26 +184,28 @@ class ReadIdentityTool(Tool):
             "boot": BOOT_PATH,
             "bootstrap": BOOTSTRAP_PATH,
             "heartbeat": HEARTBEAT_PATH,
-            "tools": TOOLS_PATH
+            "tools": TOOLS_PATH,
         }
-        
+
         if file == "daily":
             import datetime
+
             today = datetime.date.today().isoformat()
             path = MEMORY_DIR / f"{today}.md"
         else:
             path = mapping.get(file)
-            
+
         if not path:
             return f"Unknown file type: {file}"
-            
+
         if not path.exists():
             return f"File does not exist: {path}"
-            
+
         import aiofiles
+
         async with aiofiles.open(path, "r") as f:
             content = await f.read()
-            
+
         return f"--- {path.name} ---\n{content}"
 
 
@@ -202,7 +226,18 @@ class UpdateIdentityTool(Tool):
                 "properties": {
                     "file": {
                         "type": "string",
-                        "enum": ["soul", "user", "memory", "identity", "agents", "boot", "bootstrap", "heartbeat", "tools", "daily"],
+                        "enum": [
+                            "soul",
+                            "user",
+                            "memory",
+                            "identity",
+                            "agents",
+                            "boot",
+                            "bootstrap",
+                            "heartbeat",
+                            "tools",
+                            "daily",
+                        ],
                         "description": "Which file to update. 'daily' appends to today's note.",
                     },
                     "content": {
@@ -220,13 +255,20 @@ class UpdateIdentityTool(Tool):
         self.requires_confirmation = False
         self.hidden = True
 
-    async def execute(self, file: str, content: str, append: bool = False, **_: Any) -> str:
+    async def execute(
+        self, file: str, content: str, append: bool = False, **_: Any
+    ) -> str:
         from pyclaw.agent.identity import (
-            SOUL_PATH, USER_PATH, MEMORY_PATH, IDENTITY_PATH, 
-            AGENTS_PATH, BOOT_PATH, BOOTSTRAP_PATH, HEARTBEAT_PATH, TOOLS_PATH,
-            append_user, append_memory
+            IDENTITY_PATH,
+            AGENTS_PATH,
+            BOOT_PATH,
+            BOOTSTRAP_PATH,
+            HEARTBEAT_PATH,
+            TOOLS_PATH,
+            append_user,
+            append_memory,
         )
-        
+
         mapping = {
             "soul": SOUL_PATH,
             "user": USER_PATH,
@@ -236,9 +278,9 @@ class UpdateIdentityTool(Tool):
             "boot": BOOT_PATH,
             "bootstrap": BOOTSTRAP_PATH,
             "heartbeat": HEARTBEAT_PATH,
-            "tools": TOOLS_PATH
+            "tools": TOOLS_PATH,
         }
-        
+
         path = mapping.get(file)
         if append:
             if file == "user":
@@ -253,16 +295,19 @@ class UpdateIdentityTool(Tool):
             else:
                 # Basic append for others
                 import aiofiles
+
                 async with aiofiles.open(path, "a") as f:
                     await f.write(f"\n\n{content}")
                 return f"Appended to {path.name}"
         else:
             if file == "daily":
                 import datetime
+
                 today = datetime.date.today().isoformat()
                 path = MEMORY_DIR / f"{today}.md"
-            
+
             import aiofiles
+
             async with aiofiles.open(path, "w") as f:
                 await f.write(content)
             return f"Updated {path.name if path else file} successfully."
@@ -295,5 +340,6 @@ class LogMemoryTool(Tool):
 
     async def execute(self, text: str, **_: Any) -> str:
         from pyclaw.agent.identity import write_daily_note
+
         await write_daily_note(text)
         return "Memory logged to daily note."

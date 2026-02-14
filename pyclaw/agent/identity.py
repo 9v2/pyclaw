@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Optional
 
 import aiofiles
 
@@ -125,6 +124,7 @@ async def write_daily_note(content: str) -> None:
     ensure_identity_files()
     MEMORY_DIR.mkdir(parents=True, exist_ok=True)
     import datetime
+
     today = datetime.date.today().isoformat()
     path = MEMORY_DIR / f"{today}.md"
     async with aiofiles.open(path, "a") as f:
@@ -135,8 +135,10 @@ async def list_recent_memories(limit: int = 5) -> list[str]:
     """List the names of the most recent daily memory files."""
     if not MEMORY_DIR.exists():
         return []
-    import os
-    files = sorted([f for f in os.listdir(MEMORY_DIR) if f.endswith(".md")], reverse=True)
+
+    files = sorted(
+        [f for f in os.listdir(MEMORY_DIR) if f.endswith(".md")], reverse=True
+    )
     return files[:limit]
 
 
@@ -197,9 +199,20 @@ async def build_system_prompt(cfg: Config) -> str:
 
 def wipe_identity() -> None:
     """Delete all identity files (factory reset)."""
-    for p in (SOUL_PATH, USER_PATH, MEMORY_PATH, TOOLS_PATH, IDENTITY_PATH, AGENTS_PATH, BOOT_PATH, BOOTSTRAP_PATH, HEARTBEAT_PATH):
+    for p in (
+        SOUL_PATH,
+        USER_PATH,
+        MEMORY_PATH,
+        TOOLS_PATH,
+        IDENTITY_PATH,
+        AGENTS_PATH,
+        BOOT_PATH,
+        BOOTSTRAP_PATH,
+        HEARTBEAT_PATH,
+    ):
         if p.exists():
             p.unlink()
+
 
 # --- Templates ---
 
@@ -517,7 +530,7 @@ Skills are shared. Your setup is yours. Keeping them apart means you can update 
 
 Add whatever helps you do your job. This is your cheat sheet.
 """
-    
+
 # First boot logic prompt
 FIRST_BOOT_SYSTEM = """First boot. No identity exists yet.
 

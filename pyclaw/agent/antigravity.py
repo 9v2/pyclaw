@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import json
 import secrets
-from typing import Any, AsyncIterator, Optional
+from typing import Any, AsyncIterator
 
 import aiohttp
 
@@ -52,11 +52,13 @@ def _build_headers(access_token: str, streaming: bool = False) -> dict[str, str]
         "Content-Type": "application/json",
         "User-Agent": "antigravity/1.15.8 windows/amd64",
         "X-Goog-Api-Client": "google-cloud-sdk vscode_cloudshelleditor/0.1",
-        "Client-Metadata": json.dumps({
-            "ideType": "ANTIGRAVITY",
-            "platform": "PLATFORM_UNSPECIFIED",
-            "pluginType": "GEMINI",
-        }),
+        "Client-Metadata": json.dumps(
+            {
+                "ideType": "ANTIGRAVITY",
+                "platform": "PLATFORM_UNSPECIFIED",
+                "pluginType": "GEMINI",
+            }
+        ),
     }
     if streaming:
         headers["Accept"] = "text/event-stream"
@@ -107,6 +109,7 @@ def _build_request_body(
 
 # ── Streaming Generation ────────────────────────────────────────────
 
+
 async def stream_generate(
     access_token: str,
     model: str,
@@ -123,8 +126,13 @@ async def stream_generate(
     """
     headers = _build_headers(access_token, streaming=True)
     body = _build_request_body(
-        model, contents, system_instruction,
-        temperature, max_output_tokens, project_id, tools,
+        model,
+        contents,
+        system_instruction,
+        temperature,
+        max_output_tokens,
+        project_id,
+        tools,
     )
 
     try:
@@ -191,8 +199,13 @@ async def stream_generate_raw(
     """
     headers = _build_headers(access_token, streaming=True)
     body = _build_request_body(
-        model, contents, system_instruction,
-        temperature, max_output_tokens, project_id, tools,
+        model,
+        contents,
+        system_instruction,
+        temperature,
+        max_output_tokens,
+        project_id,
+        tools,
     )
 
     try:
@@ -237,6 +250,7 @@ async def stream_generate_raw(
 
 # ── Non-Streaming Generation ────────────────────────────────────────
 
+
 async def generate(
     access_token: str,
     model: str,
@@ -249,8 +263,12 @@ async def generate(
     """Non-streaming generation — returns the full response text."""
     headers = _build_headers(access_token)
     body = _build_request_body(
-        model, contents, system_instruction,
-        temperature, max_output_tokens, project_id,
+        model,
+        contents,
+        system_instruction,
+        temperature,
+        max_output_tokens,
+        project_id,
     )
 
     async with aiohttp.ClientSession() as session:
@@ -277,6 +295,7 @@ async def generate(
 
 
 # ── Fetch Available Models ──────────────────────────────────────────
+
 
 async def fetch_available_models(
     access_token: str,
@@ -307,6 +326,7 @@ async def fetch_available_models(
 
 # ── Fetch Usage / Credits ───────────────────────────────────────────
 
+
 async def fetch_usage(
     access_token: str,
 ) -> dict[str, Any]:
@@ -319,11 +339,13 @@ async def fetch_usage(
                 async with session.post(
                     f"{endpoint}/v1internal:loadCodeAssist",
                     headers=headers,
-                    json={"metadata": {
-                        "ideType": "ANTIGRAVITY",
-                        "platform": "PLATFORM_UNSPECIFIED",
-                        "pluginType": "GEMINI",
-                    }},
+                    json={
+                        "metadata": {
+                            "ideType": "ANTIGRAVITY",
+                            "platform": "PLATFORM_UNSPECIFIED",
+                            "pluginType": "GEMINI",
+                        }
+                    },
                     timeout=aiohttp.ClientTimeout(total=15),
                 ) as resp:
                     if resp.ok:

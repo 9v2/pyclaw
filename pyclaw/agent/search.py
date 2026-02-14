@@ -6,7 +6,6 @@ Also includes a general web page reader.
 
 from __future__ import annotations
 
-import json
 import re
 from typing import Any
 
@@ -55,7 +54,9 @@ class WebSearchTool(Tool):
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(
-                    url, headers=headers, params=params,
+                    url,
+                    headers=headers,
+                    params=params,
                     timeout=aiohttp.ClientTimeout(total=10),
                 ) as resp:
                     if resp.status != 200:

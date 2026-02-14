@@ -29,7 +29,7 @@ class TakeScreenshotTool(Tool):
                     }
                 },
                 "required": [],
-            }
+            },
         )
         self.session = session
         self.requires_confirmation = False
@@ -42,12 +42,12 @@ class TakeScreenshotTool(Tool):
         """Take a screenshot using scrot or gnome-screenshot."""
         tool = "scrot"
         if not shutil.which("scrot"):
-             tool = "gnome-screenshot"
-             if not shutil.which("gnome-screenshot"):
-                 return ToolResult(
-                     error="Neither `scrot` nor `gnome-screenshot` found. "
-                           "Please ask the user to install `scrot`."
-                 )
+            tool = "gnome-screenshot"
+            if not shutil.which("gnome-screenshot"):
+                return ToolResult(
+                    error="Neither `scrot` nor `gnome-screenshot` found. "
+                    "Please ask the user to install `scrot`."
+                )
 
         if not self.session:
             return ToolResult(error="No active session to display image in.")
@@ -56,7 +56,7 @@ class TakeScreenshotTool(Tool):
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tf:
             path = tf.name
         # Close handle so subprocess can write
-        # NamedTemporaryFile deletes on close by default if not delete=False? 
+        # NamedTemporaryFile deletes on close by default if not delete=False?
         # delete=False is set above.
 
         cmd = []
@@ -71,9 +71,7 @@ class TakeScreenshotTool(Tool):
 
         try:
             proc = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
             )
             stdout, stderr = await proc.communicate()
 
@@ -86,17 +84,17 @@ class TakeScreenshotTool(Tool):
                 return ToolResult(error="Screenshot file empty or missing.")
 
             data = p.read_bytes()
-            
+
             # Inject into session
             # We add it as a user message part so the model sees it in history
             self.session.add_image("user", data, "image/png", "Screenshot of my screen")
-            
+
             # Cleanup
             p.unlink(missing_ok=True)
-            
+
             return ToolResult(
                 result="Screenshot captured and added to conversation. "
-                       "You can now see the user's screen."
+                "You can now see the user's screen."
             )
 
         except Exception as e:

@@ -13,8 +13,10 @@ from typing import Any, AsyncIterator, Callable, Awaitable, Optional
 from pyclaw.agent.session import Session
 from pyclaw.agent.providers import Provider
 from pyclaw.agent.tools import (
-    Tool, ToolRegistry, ToolResult, create_default_registry,
+    ToolRegistry,
+    create_default_registry,
 )
+
 # from pyclaw.agent.identity import (
 #     build_system_prompt, is_first_boot, FIRST_BOOT_SYSTEM, TOOLS_PATH,
 # )
@@ -27,10 +29,38 @@ MAX_TOOL_ROUNDS = 15
 
 # Safe commands that don"t need confirmation (read-only)
 SAFE_COMMANDS = (
-    "ls", "cat", "grep", "find", "pwd", "echo", "print", "printf",
-    "whoami", "date", "uptime", "df", "du", "free", "top", "ps", "head",
-    "tail", "wc", "sort", "uniq", "awk", "sed", "git status", "git log",
-    "git diff", "git show", "stat", "file", "readlink", "whereis", "which",
+    "ls",
+    "cat",
+    "grep",
+    "find",
+    "pwd",
+    "echo",
+    "print",
+    "printf",
+    "whoami",
+    "date",
+    "uptime",
+    "df",
+    "du",
+    "free",
+    "top",
+    "ps",
+    "head",
+    "tail",
+    "wc",
+    "sort",
+    "uniq",
+    "awk",
+    "sed",
+    "git status",
+    "git log",
+    "git diff",
+    "git show",
+    "stat",
+    "file",
+    "readlink",
+    "whereis",
+    "which",
 )
 
 
@@ -46,9 +76,15 @@ class Agent:
     """
 
     __slots__ = (
-        "_cfg", "_session", "_skills", "_model_id",
-        "_model_variant", "_tools", "_provider",
-        "_confirm_callback", "_cancelled",
+        "_cfg",
+        "_session",
+        "_skills",
+        "_model_id",
+        "_model_variant",
+        "_tools",
+        "_provider",
+        "_confirm_callback",
+        "_cancelled",
     )
 
     def __init__(
@@ -92,26 +128,39 @@ class Agent:
         # Config tools
         # Config tools
         from pyclaw.agent.config_tool import (
-            GetConfigTool, SetConfigTool, ChangeModelTool,
+            GetConfigTool,
+            SetConfigTool,
+            ChangeModelTool,
             BackupConfigTool,
         )
-        for ToolCls in (GetConfigTool, SetConfigTool, ChangeModelTool, BackupConfigTool):
+
+        for ToolCls in (
+            GetConfigTool,
+            SetConfigTool,
+            ChangeModelTool,
+            BackupConfigTool,
+        ):
             tool = ToolCls()
             tool.bind(cfg)
             registry.register(tool)
 
         # Identity tools (OpenClaw Port)
         from pyclaw.agent.identity_tools import (
-            UpdateIdentityTool, ReadIdentityTool,
+            UpdateIdentityTool,
+            ReadIdentityTool,
         )
+
         registry.register(UpdateIdentityTool())
         registry.register(ReadIdentityTool())
 
         # Cron tools
         from pyclaw.agent.cron import (
-            ListCronJobsTool, AddCronJobTool, RemoveCronJobTool,
+            ListCronJobsTool,
+            AddCronJobTool,
+            RemoveCronJobTool,
             CronManager,
         )
+
         cron = CronManager(cfg)
         cron.load_jobs()
         for ToolCls in (ListCronJobsTool, AddCronJobTool, RemoveCronJobTool):
@@ -123,6 +172,7 @@ class Agent:
         search_provider = cfg.get("search.provider")
         if search_provider:
             from pyclaw.agent.search import WebSearchTool
+
             if search_provider == "brave":
                 api_key = cfg.get("search.brave_api_key", "")
                 if api_key:
@@ -131,16 +181,14 @@ class Agent:
                 api_key = cfg.get("search.perplexity_api_key", "")
                 if api_key:
                     registry.register(WebSearchTool("perplexity", api_key))
-        
+
         # Webpage reader (always available)
         try:
             from pyclaw.agent.search import ReadWebpageTool
+
             registry.register(ReadWebpageTool())
         except ImportError:
             pass
-
-
-
 
         return registry
 
@@ -178,15 +226,14 @@ class Agent:
     def cfg(self) -> Config:
         return self._cfg
 
-    def set_confirm_callback(
-        self, cb: Callable[[str, dict], Awaitable[bool]]
-    ) -> None:
+    def set_confirm_callback(self, cb: Callable[[str, dict], Awaitable[bool]]) -> None:
         """Set the confirmation callback for destructive actions."""
         self._confirm_callback = cb
 
     def is_first_boot(self) -> bool:
         """Check if this is the first boot (no SOUL.md yet)."""
         from pyclaw.agent.identity import is_first_boot
+
         return is_first_boot()
 
     def cancel(self) -> None:
@@ -286,12 +333,27 @@ class Agent:
                 if needs_confirm and self._cfg.get("safety.confirm_destructive", True):
                     if name == "run_command":
                         cmd = args.get("command", "").strip()
-                        
+
                         blocked = self._cfg.get("safety.blocked_patterns", [])
                         for pattern in blocked:
                             if pattern in cmd:
-                                yield {"type": "tool_result", "name": name, "result": None, "error": f"Blocked: '{pattern}'"}
-                                tool_response_parts.append({"functionResponse": {"name": name, "id": call_id, "response": {"error": f"Blocked: '{pattern}'"}}})
+                                yield {
+                                    "type": "tool_result",
+                                    "name": name,
+                                    "result": None,
+                                    "error": f"Blocked: '{pattern}'",
+                                }
+                                tool_response_parts.append(
+                                    {
+                                        "functionResponse": {
+                                            "name": name,
+                                            "id": call_id,
+                                            "response": {
+                                                "error": f"Blocked: '{pattern}'"
+                                            },
+                                        }
+                                    }
+                                )
                                 continue
 
                         is_safe = False
@@ -307,16 +369,46 @@ class Agent:
                     if self._confirm_callback:
                         confirmed = await self._confirm_callback(name, args)
                         if not confirmed:
-                            tool_response_parts.append({"functionResponse": {"name": name, "id": call_id, "response": {"error": "User denied"}}})
-                            yield {"type": "tool_result", "name": name, "result": None, "error": "User denied"}
+                            tool_response_parts.append(
+                                {
+                                    "functionResponse": {
+                                        "name": name,
+                                        "id": call_id,
+                                        "response": {"error": "User denied"},
+                                    }
+                                }
+                            )
+                            yield {
+                                "type": "tool_result",
+                                "name": name,
+                                "result": None,
+                                "error": "User denied",
+                            }
                             continue
 
                 yield {"type": "tool_call", "name": name, "args": args, "id": call_id}
                 result = await self._tools.execute(name, call_id, args)
-                yield {"type": "tool_result", "name": name, "result": str(result.result) if result.result else None, "error": result.error}
+                yield {
+                    "type": "tool_result",
+                    "name": name,
+                    "result": str(result.result) if result.result else None,
+                    "error": result.error,
+                }
 
-                response_data = {"error": result.error} if result.error else {"result": result.result}
-                tool_response_parts.append({"functionResponse": {"name": name, "id": call_id, "response": response_data}})
+                response_data = (
+                    {"error": result.error}
+                    if result.error
+                    else {"result": result.result}
+                )
+                tool_response_parts.append(
+                    {
+                        "functionResponse": {
+                            "name": name,
+                            "id": call_id,
+                            "response": response_data,
+                        }
+                    }
+                )
 
             self._session.add_raw("user", tool_response_parts)
             text_chunks = []
@@ -433,7 +525,7 @@ class Agent:
                     # Check for blocked patterns
                     if name == "run_command":
                         cmd = args.get("command", "").strip()
-                        
+
                         # Check blocked patterns
                         blocked = self._cfg.get("safety.blocked_patterns", [])
                         for pattern in blocked:
@@ -444,22 +536,26 @@ class Agent:
                                     "result": None,
                                     "error": f"Blocked: command contains '{pattern}'",
                                 }
-                                tool_response_parts.append({
-                                    "functionResponse": {
-                                        "name": name,
-                                        "id": call_id,
-                                        "response": {"error": f"Blocked: '{pattern}'"},
+                                tool_response_parts.append(
+                                    {
+                                        "functionResponse": {
+                                            "name": name,
+                                            "id": call_id,
+                                            "response": {
+                                                "error": f"Blocked: '{pattern}'"
+                                            },
+                                        }
                                     }
-                                })
+                                )
                                 continue
-                        
+
                         # Check if command is safe (starts with whitelisted prefix)
                         is_safe = False
                         for safe_cmd in SAFE_COMMANDS:
                             if cmd == safe_cmd or cmd.startswith(safe_cmd + " "):
                                 is_safe = True
                                 break
-                        
+
                         if is_safe:
                             needs_confirm = False
 
@@ -476,13 +572,15 @@ class Agent:
                     if self._confirm_callback:
                         confirmed = await self._confirm_callback(name, args)
                         if not confirmed:
-                            tool_response_parts.append({
-                                "functionResponse": {
-                                    "name": name,
-                                    "id": call_id,
-                                    "response": {"error": "User denied the action"},
+                            tool_response_parts.append(
+                                {
+                                    "functionResponse": {
+                                        "name": name,
+                                        "id": call_id,
+                                        "response": {"error": "User denied the action"},
+                                    }
                                 }
-                            })
+                            )
                             yield {
                                 "type": "tool_result",
                                 "name": name,
@@ -513,13 +611,15 @@ class Agent:
                 else:
                     response_data["result"] = result.result
 
-                tool_response_parts.append({
-                    "functionResponse": {
-                        "name": name,
-                        "id": call_id,
-                        "response": response_data,
+                tool_response_parts.append(
+                    {
+                        "functionResponse": {
+                            "name": name,
+                            "id": call_id,
+                            "response": response_data,
+                        }
                     }
-                })
+                )
 
             self._session.add_raw("user", tool_response_parts)
             text_chunks = []
@@ -556,7 +656,7 @@ class Agent:
         # But we still want the specific "Available tools" list for quick reference?
         # build_system_prompt in identity.py includes TOOLS.md content.
         # But we also have "Use them proactively..." instruction.
-        
+
         if self._tools.tools:
             tool_names = [t.name for t in self._tools.tools]
             parts.append(
@@ -577,23 +677,28 @@ class Agent:
         """Generate TOOLS.md from registered tools."""
         content = "# Available Tools (TOOLS.md)\n\n"
         content += "This file lists the tools currently available to the AI agent.\n\n"
-        
+
         for tool in sorted(self._tools.tools, key=lambda t: t.name):
             content += f"## `{tool.name}`\n"
             content += f"{tool.description}\n\n"
-            
+
             # Add parameters schema simplified
             params = tool.parameters.get("properties", {})
             if params:
                 content += "### Parameters\n"
                 for name, details in params.items():
-                    req = " (required)" if name in tool.parameters.get("required", []) else ""
+                    req = (
+                        " (required)"
+                        if name in tool.parameters.get("required", [])
+                        else ""
+                    )
                     desc = details.get("description", "")
                     content += f"- **{name}**{req}: {desc}\n"
             content += "\n---\n\n"
-            
+
         try:
             from pyclaw.agent.identity import TOOLS_PATH
+
             TOOLS_PATH.parent.mkdir(parents=True, exist_ok=True)
             TOOLS_PATH.write_text(content)
         except Exception:
@@ -612,8 +717,10 @@ class Agent:
             if msg.raw_parts:
                 contents.append({"role": role, "parts": msg.raw_parts})
             else:
-                contents.append({
-                    "role": role,
-                    "parts": [{"text": msg.content}],
-                })
+                contents.append(
+                    {
+                        "role": role,
+                        "parts": [{"text": msg.content}],
+                    }
+                )
         return contents

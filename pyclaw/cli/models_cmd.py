@@ -7,11 +7,8 @@ import asyncio
 import click
 from rich.console import Console
 from rich.table import Table
-from rich.panel import Panel
-from rich.text import Text
 
 from pyclaw.config.config import Config
-from pyclaw.config.models import MODELS, get_model
 
 
 console = Console()
@@ -24,7 +21,7 @@ async def _list_and_select() -> None:
 
     cfg = await Config.load()
     current = cfg.get("agent.model", "")
-    
+
     # Refresh token for fetching
     console.print("[dim]fetching available models...[/dim]")
     token = await refresh_token_if_needed(cfg)
@@ -60,7 +57,7 @@ async def _list_and_select() -> None:
         is_current = model.id == current
         marker = "→" if is_current else ""
         style = "bold bright_green" if is_current else ""
-        
+
         quota_str = f"{model.remaining_percent}%"
         if model.remaining_fraction < 0.2:
             quota_str = f"[red]{quota_str}[/red]"
@@ -111,7 +108,7 @@ async def _list_and_select() -> None:
     cfg.set("agent.model", selected.id)
     # Clear variant as we are selecting a new base model from API list
     cfg.set("agent.model_variant", "")
-    
+
     await cfg.save()
     console.print(f"\n[green]✓[/green] model set to [bold]{selected.id}[/bold]")
 

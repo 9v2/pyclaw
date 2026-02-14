@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import os
 import secrets
 import webbrowser
 from typing import Any, Optional
@@ -80,15 +79,14 @@ _RESPONSE_PAGE = """<!DOCTYPE html>
 
 # ── PKCE ────────────────────────────────────────────────────────────
 
+
 def _generate_pkce() -> tuple[str, str]:
     """Generate PKCE verifier and S256 challenge."""
     verifier = secrets.token_hex(32)  # 64-char hex string (same as TS)
-    challenge = (
-        hashlib.sha256(verifier.encode())
-        .digest()
-    )
+    challenge = hashlib.sha256(verifier.encode()).digest()
     # base64url encode without padding
     import base64
+
     challenge_b64 = base64.urlsafe_b64encode(challenge).rstrip(b"=").decode()
     return verifier, challenge_b64
 
@@ -182,6 +180,7 @@ async def _exchange_code(code: str, verifier: str) -> dict[str, Any]:
         raise RuntimeError("Token exchange returned no refresh_token")
 
     import time
+
     expires = time.time() + expires_in - 5 * 60  # 5-min safety margin (same as TS)
     return {"access": access, "refresh": refresh, "expires": expires}
 
@@ -211,20 +210,24 @@ async def _fetch_project_id(access_token: str) -> str:
         "Content-Type": "application/json",
         "User-Agent": "google-api-nodejs-client/9.15.1",
         "X-Goog-Api-Client": "google-cloud-sdk vscode_cloudshelleditor/0.1",
-        "Client-Metadata": json_mod.dumps({
-            "ideType": "IDE_UNSPECIFIED",
-            "platform": "PLATFORM_UNSPECIFIED",
-            "pluginType": "GEMINI",
-        }),
+        "Client-Metadata": json_mod.dumps(
+            {
+                "ideType": "IDE_UNSPECIFIED",
+                "platform": "PLATFORM_UNSPECIFIED",
+                "pluginType": "GEMINI",
+            }
+        ),
     }
 
-    body = json_mod.dumps({
-        "metadata": {
-            "ideType": "IDE_UNSPECIFIED",
-            "platform": "PLATFORM_UNSPECIFIED",
-            "pluginType": "GEMINI",
+    body = json_mod.dumps(
+        {
+            "metadata": {
+                "ideType": "IDE_UNSPECIFIED",
+                "platform": "PLATFORM_UNSPECIFIED",
+                "pluginType": "GEMINI",
+            }
         }
-    })
+    )
 
     for endpoint in _CODE_ASSIST_ENDPOINTS:
         try:
@@ -249,6 +252,7 @@ async def _fetch_project_id(access_token: str) -> str:
 
 
 # ── Public API ──────────────────────────────────────────────────────
+
 
 async def start_auth_flow() -> dict[str, Any]:
     """Run the full OAuth flow. Returns token dict or error dict.

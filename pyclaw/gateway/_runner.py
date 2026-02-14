@@ -57,7 +57,8 @@ def main() -> None:
             crash_count += 1
             logger.exception(
                 "gateway crashed (%d/%d), restarting…",
-                crash_count, max_crashes,
+                crash_count,
+                max_crashes,
             )
             if crash_count >= max_crashes:
                 logger.error("too many crashes, giving up.")

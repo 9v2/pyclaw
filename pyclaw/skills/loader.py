@@ -85,7 +85,9 @@ class SkillsManager:
 
     # ── Install ─────────────────────────────────────────────────────
 
-    async def install_from_path(self, source: Path, name: str | None = None) -> Skill | None:
+    async def install_from_path(
+        self, source: Path, name: str | None = None
+    ) -> Skill | None:
         """Install a skill from a local directory or SKILL.md file."""
         skills_dir = self._workspace / "skills"
         skills_dir.mkdir(parents=True, exist_ok=True)
@@ -142,6 +144,7 @@ class SkillsManager:
 
             elif url.endswith(".tar.gz") or url.endswith(".tgz"):
                 import tarfile
+
                 with tempfile.TemporaryDirectory() as tmp:
                     archive = Path(tmp) / "skill.tar.gz"
                     archive.write_bytes(content)
@@ -154,6 +157,7 @@ class SkillsManager:
 
             elif url.endswith(".zip"):
                 import zipfile
+
                 with tempfile.TemporaryDirectory() as tmp:
                     archive = Path(tmp) / "skill.zip"
                     archive.write_bytes(content)
@@ -182,7 +186,8 @@ class SkillsManager:
         if not skills_dir.is_dir():
             return []
         return sorted(
-            d.name for d in skills_dir.iterdir()
+            d.name
+            for d in skills_dir.iterdir()
             if d.is_dir() and (d / "SKILL.md").exists()
         )
 

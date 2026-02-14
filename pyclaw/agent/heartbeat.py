@@ -85,12 +85,13 @@ class Heartbeat:
                         status["checks"]["api"] = f"✅ reachable ({resp.status})"
             else:
                 status["checks"]["api"] = "⏭️ skipped"
-        except Exception as exc:
-            status["checks"]["api"] = f"❌ unreachable"
+        except Exception:
+            status["checks"]["api"] = "❌ unreachable"
 
         # Check 4: Gateway PID
         try:
             from pyclaw.gateway.manager import GatewayManager
+
             if GatewayManager.is_running():
                 pid = GatewayManager.get_pid()
                 status["checks"]["gateway"] = f"✅ running (pid {pid})"
@@ -101,6 +102,7 @@ class Heartbeat:
 
         # Check 5: Soul file
         from pyclaw.agent.identity import SOUL_PATH
+
         status["checks"]["soul"] = (
             "✅ configured" if SOUL_PATH.exists() else "⚠️ first boot"
         )

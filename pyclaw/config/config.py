@@ -126,8 +126,10 @@ class Config:
 
     @staticmethod
     def workspace_path(cfg_data: dict | None = None) -> Path:
-        raw = (cfg_data or DEFAULT_CONFIG).get("workspace", {}).get(
-            "path", "~/.pyclaw/workspace"
+        raw = (
+            (cfg_data or DEFAULT_CONFIG)
+            .get("workspace", {})
+            .get("path", "~/.pyclaw/workspace")
         )
         return Path(os.path.expanduser(raw))
 
@@ -136,6 +138,7 @@ class Config:
     async def backup(self) -> Path:
         """Create a timestamped backup of the config file."""
         import time
+
         ts = int(time.time())
         backup_path = self._path.parent / f"config.backup.{ts}.json"
         if self._path.exists():

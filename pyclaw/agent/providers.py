@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 import secrets
 from abc import ABC, abstractmethod
-from typing import Any, AsyncIterator, Optional
+from typing import Any, AsyncIterator
 
 import aiohttp
 
@@ -65,13 +65,15 @@ class Provider(ABC):
             return OpenAICompatProvider(
                 api_key=cfg.get("auth.custom_api_key", ""),
                 api_base=cfg.get("auth.custom_api_base", ""),
-                default_model=cfg.get("auth.custom_model") or cfg.get("agent.model", ""),
+                default_model=cfg.get("auth.custom_model")
+                or cfg.get("agent.model", ""),
             )
         else:
             raise ValueError(f"Unknown provider: {provider_name}")
 
 
 # ── Antigravity Provider ─────────────────────────────────────────────
+
 
 class AntigravityProvider(Provider):
     """Google Cloud Code Assist via Antigravity API."""
@@ -128,6 +130,7 @@ class AntigravityProvider(Provider):
 
 # ── OpenAI-Compatible Provider ───────────────────────────────────────
 
+
 class OpenAICompatProvider(Provider):
     """OpenAI-compatible API (works for OpenAI, Anthropic via proxy, custom)."""
 
@@ -169,47 +172,57 @@ class OpenAICompatProvider(Provider):
             for p in parts:
                 if "functionCall" in p:
                     fc = p["functionCall"]
-                    messages.append({
-                        "role": "assistant",
-                        "content": None,
-                        "tool_calls": [{
-                            "id": fc.get("id", secrets.token_hex(8)),
-                            "type": "function",
-                            "function": {
-                                "name": fc["name"],
-                                "arguments": json.dumps(fc.get("args", {})),
-                            }
-                        }],
-                    })
+                    messages.append(
+                        {
+                            "role": "assistant",
+                            "content": None,
+                            "tool_calls": [
+                                {
+                                    "id": fc.get("id", secrets.token_hex(8)),
+                                    "type": "function",
+                                    "function": {
+                                        "name": fc["name"],
+                                        "arguments": json.dumps(fc.get("args", {})),
+                                    },
+                                }
+                            ],
+                        }
+                    )
                     continue
                 if "functionResponse" in p:
                     fr = p["functionResponse"]
-                    messages.append({
-                        "role": "tool",
-                        "tool_call_id": fr.get("id", ""),
-                        "content": json.dumps(fr.get("response", {})),
-                    })
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": fr.get("id", ""),
+                            "content": json.dumps(fr.get("response", {})),
+                        }
+                    )
                     continue
                 if "text" in p:
                     messages.append({"role": role, "content": p["text"]})
 
         return messages
 
-    def _convert_tools(self, tools: list[dict[str, Any]] | None) -> list[dict[str, Any]] | None:
+    def _convert_tools(
+        self, tools: list[dict[str, Any]] | None
+    ) -> list[dict[str, Any]] | None:
         """Convert Gemini tools to OpenAI tools format."""
         if not tools:
             return None
         result: list[dict[str, Any]] = []
         for tool_group in tools:
             for fd in tool_group.get("functionDeclarations", []):
-                result.append({
-                    "type": "function",
-                    "function": {
-                        "name": fd["name"],
-                        "description": fd.get("description", ""),
-                        "parameters": fd.get("parameters", {}),
-                    },
-                })
+                result.append(
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": fd["name"],
+                            "description": fd.get("description", ""),
+                            "parameters": fd.get("parameters", {}),
+                        },
+                    }
+                )
         return result or None
 
     async def stream(
@@ -306,13 +319,15 @@ class OpenAICompatProvider(Provider):
                         yield {
                             "content": {
                                 "role": "model",
-                                "parts": [{
-                                    "functionCall": {
-                                        "name": ptc["name"],
-                                        "args": args,
-                                        "id": ptc["id"],
+                                "parts": [
+                                    {
+                                        "functionCall": {
+                                            "name": ptc["name"],
+                                            "args": args,
+                                            "id": ptc["id"],
+                                        }
                                     }
-                                }],
+                                ],
                             }
                         }
 
@@ -335,8 +350,7 @@ class OpenAICompatProvider(Provider):
                     data = await resp.json()
                     models = data.get("data", [])
                     return [
-                        {"id": m.get("id", ""), "name": m.get("id", "")}
-                        for m in models
+                        {"id": m.get("id", ""), "name": m.get("id", "")} for m in models
                     ]
         except Exception:
             return []

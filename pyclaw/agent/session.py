@@ -87,11 +87,13 @@ class Session:
         text_parts = [p.get("text", "") for p in parts if "text" in p]
         content = "".join(text_parts)
 
-        self._messages.append(Message(
-            role=internal_role,
-            content=content,
-            raw_parts=parts,
-        ))
+        self._messages.append(
+            Message(
+                role=internal_role,
+                content=content,
+                raw_parts=parts,
+            )
+        )
         self._truncate()
 
     def add_image(
@@ -107,6 +109,7 @@ class Session:
         directly to vision-capable models.
         """
         import base64
+
         b64 = base64.b64encode(image_data).decode("ascii")
 
         parts: list[dict[str, Any]] = [
@@ -120,11 +123,13 @@ class Session:
         if caption:
             parts.append({"text": caption})
 
-        self._messages.append(Message(
-            role=role,
-            content=caption or "[image]",
-            raw_parts=parts,
-        ))
+        self._messages.append(
+            Message(
+                role=role,
+                content=caption or "[image]",
+                raw_parts=parts,
+            )
+        )
         self._truncate()
 
     def clear(self) -> None:

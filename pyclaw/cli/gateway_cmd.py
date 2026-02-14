@@ -25,10 +25,12 @@ async def _ensure_token() -> bool:
 
     console.print("[yellow]⚠️ telegram bot token not configured.[/yellow]")
     try:
-        should_setup = console.input("[bold]setup a telegram bot now? (Y/n): [/]").strip().lower()
+        should_setup = (
+            console.input("[bold]setup a telegram bot now? (Y/n): [/]").strip().lower()
+        )
     except (KeyboardInterrupt, EOFError):
         should_setup = "n"
-    
+
     if should_setup not in ("", "y", "yes"):
         return False
 
@@ -114,7 +116,9 @@ async def _interactive_menu() -> None:
                 # Show last 50 lines
                 lines = content.strip().splitlines()
                 tail = "\n".join(lines[-50:])
-                console.print(Panel(tail or "[dim]no logs yet[/dim]", title="gateway logs"))
+                console.print(
+                    Panel(tail or "[dim]no logs yet[/dim]", title="gateway logs")
+                )
             else:
                 console.print("[dim]no logs yet.[/dim]")
         elif choice == "1":

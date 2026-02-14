@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import time
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Optional
@@ -29,9 +28,10 @@ logger = logging.getLogger("pyclaw.cron")
 @dataclass
 class CronJob:
     """A scheduled job."""
+
     name: str
-    schedule: str       # cron expression: "min hour dom mon dow"
-    action: str         # prompt to send to agent
+    schedule: str  # cron expression: "min hour dom mon dow"
+    action: str  # prompt to send to agent
     enabled: bool = True
 
 
@@ -102,25 +102,30 @@ class CronManager:
         self._jobs.clear()
         raw_jobs = self._cfg.get("cron.jobs", [])
         for j in raw_jobs:
-            self._jobs.append(CronJob(
-                name=j.get("name", "unnamed"),
-                schedule=j.get("schedule", ""),
-                action=j.get("action", ""),
-                enabled=j.get("enabled", True),
-            ))
+            self._jobs.append(
+                CronJob(
+                    name=j.get("name", "unnamed"),
+                    schedule=j.get("schedule", ""),
+                    action=j.get("action", ""),
+                    enabled=j.get("enabled", True),
+                )
+            )
         return self._jobs
 
     async def save_jobs(self) -> None:
         """Save current jobs to config."""
-        self._cfg.set("cron.jobs", [
-            {
-                "name": j.name,
-                "schedule": j.schedule,
-                "action": j.action,
-                "enabled": j.enabled,
-            }
-            for j in self._jobs
-        ])
+        self._cfg.set(
+            "cron.jobs",
+            [
+                {
+                    "name": j.name,
+                    "schedule": j.schedule,
+                    "action": j.action,
+                    "enabled": j.enabled,
+                }
+                for j in self._jobs
+            ],
+        )
         await self._cfg.save()
 
     def add_job(self, name: str, schedule: str, action: str) -> CronJob:
@@ -164,9 +169,7 @@ class CronManager:
                     if job.enabled and cron_matches(job.schedule, now):
                         logger.info("firing cron job: %s", job.name)
                         try:
-                            await self._callback(
-                                f"[Cron Job: {job.name}] {job.action}"
-                            )
+                            await self._callback(f"[Cron Job: {job.name}] {job.action}")
                         except Exception as exc:
                             logger.error("cron job %s failed: %s", job.name, exc)
 

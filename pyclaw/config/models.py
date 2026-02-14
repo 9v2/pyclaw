@@ -7,7 +7,7 @@ Model IDs match the API spec exactly (no date suffixes):
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -48,6 +48,7 @@ def get_default_model() -> Model:
 
 # ── Dynamic model fetching ──────────────────────────────────────────
 
+
 @dataclass
 class LiveModel:
     """A model returned by the Antigravity API with quota info."""
@@ -82,13 +83,15 @@ async def fetch_live_models(
             except ValueError:
                 remaining = 1.0
 
-        result.append(LiveModel(
-            id=model_id,
-            display_name=model_info.get("displayName", model_id),
-            remaining_fraction=remaining,
-            remaining_percent=round(remaining * 100),
-            reset_time=quota.get("resetTime"),
-        ))
+        result.append(
+            LiveModel(
+                id=model_id,
+                display_name=model_info.get("displayName", model_id),
+                remaining_fraction=remaining,
+                remaining_percent=round(remaining * 100),
+                reset_time=quota.get("resetTime"),
+            )
+        )
 
     result.sort(key=lambda m: m.id)
     return result

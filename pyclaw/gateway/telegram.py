@@ -12,21 +12,25 @@ from __future__ import annotations
 
 import asyncio
 import io
-import json
 import logging
-import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Dict
 
 from tgram import TgBot, filters
-from tgram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, ReactionTypeEmoji
+from tgram.types import (
+    Message,
+    CallbackQuery,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+    ReactionTypeEmoji,
+)
 
 from pyclaw.agent.agent import Agent
 from pyclaw.agent.session import Session
 from pyclaw.agent.heartbeat import Heartbeat
 from pyclaw.agent.identity import wipe_identity
 from pyclaw.config.config import Config
-from pyclaw.config.models import get_model, MODELS
+from pyclaw.config.models import get_model
 
 logger = logging.getLogger("pyclaw.gateway")
 
@@ -42,9 +46,25 @@ _IMAGE_MIMES = {
 
 # Greeting patterns for auto-reaction
 _GREETINGS = {
-    "hello", "hi", "hey", "hola", "مرحبا", "هلا", "هلاو", "هاي",
-    "أهلا", "السلام", "سلام", "صباح", "مساء", "اهلا", "اهلين",
-    "yo", "sup", "good morning", "good evening",
+    "hello",
+    "hi",
+    "hey",
+    "hola",
+    "مرحبا",
+    "هلا",
+    "هلاو",
+    "هاي",
+    "أهلا",
+    "السلام",
+    "سلام",
+    "صباح",
+    "مساء",
+    "اهلا",
+    "اهلين",
+    "yo",
+    "sup",
+    "good morning",
+    "good evening",
 }
 
 # Reaction emoji sets
@@ -57,8 +77,13 @@ class TelegramGateway:
     """Telegram ↔ Agent bridge with vision and tool support."""
 
     __slots__ = (
-        "_cfg", "_bot", "_sessions", "_agents",
-        "_allowed_users", "_heartbeat", "_running_tasks",
+        "_cfg",
+        "_bot",
+        "_sessions",
+        "_agents",
+        "_allowed_users",
+        "_heartbeat",
+        "_running_tasks",
     )
 
     def __init__(self, cfg: Config, bot: TgBot) -> None:
@@ -90,6 +115,7 @@ class TelegramGateway:
                 await message.reply_text("⚠️ unauthorized.")
                 return
             from pyclaw.agent.identity import SOUL_PATH
+
             if SOUL_PATH.exists():
                 name = SOUL_PATH.read_text().split("\n")[0].strip("# ").strip()
             else:
@@ -136,13 +162,17 @@ class TelegramGateway:
         async def handle_reset(bot: TgBot, message: Message) -> None:
             if not self._is_allowed(message.from_user.id):
                 return
-            
-            keyboard = InlineKeyboardMarkup([
+
+            keyboard = InlineKeyboardMarkup(
                 [
-                    InlineKeyboardButton("Yes, Wipe Everything", callback_data="confirm_wipe"),
-                    InlineKeyboardButton("Cancel", callback_data="cancel_wipe")
+                    [
+                        InlineKeyboardButton(
+                            "Yes, Wipe Everything", callback_data="confirm_wipe"
+                        ),
+                        InlineKeyboardButton("Cancel", callback_data="cancel_wipe"),
+                    ]
                 ]
-            ])
+            )
             await message.reply_text(
                 "⚠️ **Factory Reset Warning**\n\n"
                 "This will permanently delete:\n"
@@ -165,9 +195,12 @@ class TelegramGateway:
                 if uid in self._sessions:
                     self._sessions[uid].clear()
                 if uid in self._agents:
-                     del self._agents[uid]
+                    del self._agents[uid]
 
-                await query.message.edit_text("💥 **Factory Reset Complete**.\n\nI am a blank slate. Send /start to reboot me.", parse_mode="Markdown")
+                await query.message.edit_text(
+                    "💥 **Factory Reset Complete**.\n\nI am a blank slate. Send /start to reboot me.",
+                    parse_mode="Markdown",
+                )
             else:
                 await query.message.edit_text("❌ Reset cancelled.")
 
@@ -175,37 +208,39 @@ class TelegramGateway:
         async def handle_model(bot: TgBot, message: Message) -> None:
             if not self._is_allowed(message.from_user.id):
                 return
-            
+
             parts = message.text.split()
             if len(parts) > 1:
                 new_model_id = parts[1].strip()
-                
+
                 # Check if variant provided
                 variant = parts[2].strip() if len(parts) > 2 else ""
-                
+
                 # Validation & defaulting
                 model_def = get_model(new_model_id)
                 if model_def:
                     if not variant and model_def.variants:
                         variant = model_def.default_variant or model_def.variants[0]
                     elif variant and variant not in model_def.variants:
-                        await message.reply_text(f"⚠️ unknown variant `{variant}`. available: {', '.join(model_def.variants)}")
+                        await message.reply_text(
+                            f"⚠️ unknown variant `{variant}`. available: {', '.join(model_def.variants)}"
+                        )
                         return
-                    
+
                     if not model_def.variants:
                         variant = ""
-                
+
                 # Update config
                 self._cfg.set("agent.model", new_model_id)
                 self._cfg.set("agent.model_variant", variant)
                 await self._cfg.save()
-                
+
                 # Update active agent
                 uid = message.from_user.id
                 if uid in self._agents:
                     self._agents[uid].model_id = new_model_id
                     self._agents[uid].model_variant = variant
-                
+
                 msg = f"✅ model → `{new_model_id}`"
                 if variant:
                     msg += f" ({variant})"
@@ -265,13 +300,17 @@ class TelegramGateway:
 
                 try:
                     # Download photo
-                    downloaded_file = await bot.download_file(photo.file_id, in_memory=True)
+                    downloaded_file = await bot.download_file(
+                        photo.file_id, in_memory=True
+                    )
                     photo_bytes = downloaded_file.getvalue()
 
                     # Get caption
                     caption = message.caption or ""
                     if not caption:
-                        caption = "What do you see in this image? Describe it and analyze it."
+                        caption = (
+                            "What do you see in this image? Describe it and analyze it."
+                        )
 
                     # Send to agent for vision analysis
                     events = await agent.chat_with_image(
@@ -289,15 +328,13 @@ class TelegramGateway:
                         if etype == "text":
                             text_chunks.append(event["text"])
                         elif etype == "tool_call":
-                            if event['name'] in ('write_file', 'send_file'):
-                                path = event.get('args', {}).get('path')
+                            if event["name"] in ("write_file", "send_file"):
+                                path = event.get("args", {}).get("path")
                                 if path:
                                     files_to_send.add(path)
-                        
+
                         elif etype == "error":
                             text_chunks.append(f"\n⚠️ {event['message']}")
-
-                    
 
                     # Send response
                     full = "".join(text_chunks)
@@ -315,7 +352,7 @@ class TelegramGateway:
                 except Exception as exc:
                     logger.exception("photo handling error for user %d", uid)
                     await message.reply_text(f"⚠️ error processing photo: {exc}")
-            
+
             finally:
                 typing_task.cancel()
 
@@ -339,7 +376,10 @@ class TelegramGateway:
                 is_greeting = any(g in text_lower for g in _GREETINGS)
                 if is_greeting or reaction_mode == "massive":
                     import random
-                    emoji = random.choice(_GREETING_EMOJIS if is_greeting else ["👀", "⚡", "🔥"])
+
+                    emoji = random.choice(
+                        _GREETING_EMOJIS if is_greeting else ["👀", "⚡", "🔥"]
+                    )
                     await self._react(message.chat.id, message.id, emoji)
 
             # Track this as the running task for /stop
@@ -360,11 +400,10 @@ class TelegramGateway:
                             text_chunks.append(event["text"])
 
                         elif etype == "tool_call":
-                            if event['name'] in ('write_file', 'send_file'):
-                                path = event.get('args', {}).get('path')
+                            if event["name"] in ("write_file", "send_file"):
+                                path = event.get("args", {}).get("path")
                                 if path:
                                     files_to_send.add(path)
-
 
                         elif etype == "error":
                             text_chunks.append(f"\n⚠️ {event['message']}")
@@ -391,8 +430,11 @@ class TelegramGateway:
                 # Auto-react on completion
                 if reaction_mode in ("minimal", "massive") and full.strip():
                     import random
-                    await self._react(message.chat.id, message.id, random.choice(_COMPLETION_EMOJIS))
-            
+
+                    await self._react(
+                        message.chat.id, message.id, random.choice(_COMPLETION_EMOJIS)
+                    )
+
             finally:
                 typing_task.cancel()
                 self._running_tasks.pop(uid, None)
@@ -410,7 +452,9 @@ class TelegramGateway:
         except Exception as exc:
             logger.debug("reaction failed: %s", exc)
 
-    def _register_reaction_tool(self, agent: Agent, chat_id: int, message_id: int) -> None:
+    def _register_reaction_tool(
+        self, agent: Agent, chat_id: int, message_id: int
+    ) -> None:
         """Register a send_reaction tool on the agent bound to the current message."""
         from pyclaw.agent.tools import Tool
 
@@ -530,14 +574,18 @@ class TelegramGateway:
                     asyncio.TimeoutError,
                 ) as exc:
                     logger.warning(
-                        "connection lost (%s), retrying in %ds…", exc, delay,
+                        "connection lost (%s), retrying in %ds…",
+                        exc,
+                        delay,
                     )
                     await asyncio.sleep(delay)
                     delay = min(delay * 2, max_delay)
                 except Exception as exc:
                     logger.error(
                         "unexpected error (%s: %s), retrying in %ds…",
-                        type(exc).__name__, exc, delay,
+                        type(exc).__name__,
+                        exc,
+                        delay,
                     )
                     await asyncio.sleep(delay)
                     delay = min(delay * 2, max_delay)

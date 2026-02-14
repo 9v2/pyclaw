@@ -137,9 +137,6 @@ class ChangeModelTool(Tool):
         return f"Model switched to {model_id}. Will take effect on next message."
 
 
-
-
-
 class BackupConfigTool(Tool):
     """Manually create a config backup."""
 
@@ -162,6 +159,3 @@ class BackupConfigTool(Tool):
             return "Error: config not bound"
         path = await self._cfg.backup()
         return f"Backup created at {path}"
-
-
-

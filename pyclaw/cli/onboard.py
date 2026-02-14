@@ -11,7 +11,6 @@ from rich.panel import Panel
 from rich.text import Text
 
 from pyclaw.config.config import Config
-from pyclaw.config.models import MODELS
 from pyclaw.skills.loader import SkillsManager
 from pyclaw.auth.google_auth import start_auth_flow
 from pyclaw.gateway.manager import GatewayManager
@@ -41,15 +40,21 @@ async def _setup_antigravity(cfg: Config) -> None:
     if existing_token and existing_email and expiry > time.time():
         console.print(f"[dim]currently logged in as: {existing_email}[/dim]")
         try:
-            skip = console.input("[bold bright_cyan]skip login? (Y/n): [/]").strip().lower()
+            skip = (
+                console.input("[bold bright_cyan]skip login? (Y/n): [/]")
+                .strip()
+                .lower()
+            )
         except (KeyboardInterrupt, EOFError):
             skip = "y"
-        
+
         if skip in ("", "y", "yes"):
             cfg.set("auth.provider", "antigravity")
             # Ensure we save to confirm usage
             await cfg.save()
-            console.print(f"[green]✓ using existing login for {existing_email}[/green]\n")
+            console.print(
+                f"[green]✓ using existing login for {existing_email}[/green]\n"
+            )
             return
 
     console.print("[dim]opening your browser for google sign-in…[/dim]\n")
@@ -72,7 +77,9 @@ async def _setup_antigravity(cfg: Config) -> None:
 
 async def _setup_openai(cfg: Config) -> None:
     """OpenAI API key auth."""
-    console.print("[dim]get your API key from https://platform.openai.com/api-keys[/dim]\n")
+    console.print(
+        "[dim]get your API key from https://platform.openai.com/api-keys[/dim]\n"
+    )
     try:
         key = console.input("[bold bright_cyan]openai api key: [/]").strip()
     except (KeyboardInterrupt, EOFError):
@@ -88,7 +95,9 @@ async def _setup_openai(cfg: Config) -> None:
 
 async def _setup_anthropic(cfg: Config) -> None:
     """Anthropic API key auth."""
-    console.print("[dim]get your API key from https://console.anthropic.com/settings/keys[/dim]\n")
+    console.print(
+        "[dim]get your API key from https://console.anthropic.com/settings/keys[/dim]\n"
+    )
     try:
         key = console.input("[bold bright_cyan]anthropic api key: [/]").strip()
     except (KeyboardInterrupt, EOFError):
@@ -107,7 +116,9 @@ async def _setup_custom(cfg: Config) -> None:
     console.print("[dim]set up a custom OpenAI-compatible API endpoint.[/dim]\n")
 
     try:
-        api_base = console.input("[bold bright_cyan]api base url (e.g. http://localhost:11434/v1): [/]").strip()
+        api_base = console.input(
+            "[bold bright_cyan]api base url (e.g. http://localhost:11434/v1): [/]"
+        ).strip()
     except (KeyboardInterrupt, EOFError):
         return
     if not api_base:
@@ -133,6 +144,7 @@ async def _setup_custom(cfg: Config) -> None:
     console.print("\n[dim]fetching available models…[/dim]")
     try:
         from pyclaw.agent.providers import OpenAICompatProvider
+
         provider = OpenAICompatProvider(
             api_key="" if api_key == "secret" else api_key,
             api_base=api_base,
@@ -208,11 +220,17 @@ async def _run_onboard() -> None:
     console.print("[dim]let's get you set up. this will only take a minute.[/dim]\n")
 
     # ── Step 2: Auth Provider Selection
-    console.print("[bold bright_cyan]step 1/4[/bold bright_cyan] — choose your AI provider\n")
-    console.print("  [bright_cyan]1[/bright_cyan]  Google Antigravity (free, requires Google account)")
+    console.print(
+        "[bold bright_cyan]step 1/4[/bold bright_cyan] — choose your AI provider\n"
+    )
+    console.print(
+        "  [bright_cyan]1[/bright_cyan]  Google Antigravity (free, requires Google account)"
+    )
     console.print("  [bright_cyan]2[/bright_cyan]  OpenAI (requires API key)")
     console.print("  [bright_cyan]3[/bright_cyan]  Anthropic (requires API key)")
-    console.print("  [bright_cyan]4[/bright_cyan]  Custom OpenAI-compatible (local/self-hosted)")
+    console.print(
+        "  [bright_cyan]4[/bright_cyan]  Custom OpenAI-compatible (local/self-hosted)"
+    )
     console.print()
 
     try:
@@ -234,13 +252,16 @@ async def _run_onboard() -> None:
     # ── Step 3: Model Selection (only for Antigravity)
     # ── Step 3: Model Selection (only for Antigravity)
     if cfg.get("auth.provider") == "antigravity":
-        console.print("[bold bright_cyan]step 2/4[/bold bright_cyan] — choose your default model\n")
+        console.print(
+            "[bold bright_cyan]step 2/4[/bold bright_cyan] — choose your default model\n"
+        )
         console.print("[dim]fetching available models...[/dim]")
 
         from pyclaw.config.models import fetch_live_models
+
         token = cfg.get("auth.google_token")
         project_id = cfg.get("auth.project_id")
-        
+
         live_models = []
         try:
             if token:
@@ -253,7 +274,9 @@ async def _run_onboard() -> None:
                 meta = ""
                 if model.remaining_percent is not None:
                     meta = f" [dim]({model.remaining_percent}% quota)[/dim]"
-                console.print(f"  [bright_cyan]{i}[/bright_cyan]  {model.display_name} — {model.id}{meta}")
+                console.print(
+                    f"  [bright_cyan]{i}[/bright_cyan]  {model.display_name} — {model.id}{meta}"
+                )
 
             console.print()
             try:
@@ -275,16 +298,20 @@ async def _run_onboard() -> None:
                 except ValueError:
                     console.print("[dim]keeping default.[/dim]\n")
             else:
-                 # Default to first available or gemini-2.5-flash if present?
-                 # Or just keep what was set or default
-                 console.print("[dim]keeping default model.[/dim]\n")
+                # Default to first available or gemini-2.5-flash if present?
+                # Or just keep what was set or default
+                console.print("[dim]keeping default model.[/dim]\n")
         else:
-             console.print("[yellow]could not list models. you can set one manually later via `pyclaw config`.[/yellow]\n")
+            console.print(
+                "[yellow]could not list models. you can set one manually later via `pyclaw config`.[/yellow]\n"
+            )
     else:
         console.print("[dim]step 2/4 — model already set by provider.[/dim]\n")
 
     # ── Step 4: Telegram Bot
-    console.print("[bold bright_cyan]step 3/4[/bold bright_cyan] — telegram gateway (optional)\n")
+    console.print(
+        "[bold bright_cyan]step 3/4[/bold bright_cyan] — telegram gateway (optional)\n"
+    )
     console.print("[dim]set up a telegram bot to chat with pyclaw via telegram.[/dim]")
     console.print("[dim]get a bot token from @BotFather on telegram.[/dim]\n")
 
@@ -295,16 +322,22 @@ async def _run_onboard() -> None:
         masked = existing_token[:6] + "..." + existing_token[-4:]
         console.print(f"[dim]existing token: {masked}[/dim]")
         try:
-            choice = console.input("[bold bright_cyan]keep existing? (Y/n): [/]").strip().lower()
+            choice = (
+                console.input("[bold bright_cyan]keep existing? (Y/n): [/]")
+                .strip()
+                .lower()
+            )
         except (KeyboardInterrupt, EOFError):
             choice = "y"
         if choice in ("", "y", "yes"):
             use_existing_token = True
             token = existing_token
-    
+
     if not use_existing_token:
         try:
-            token = console.input("[bold bright_cyan]bot token (enter to skip): [/]").strip()
+            token = console.input(
+                "[bold bright_cyan]bot token (enter to skip): [/]"
+            ).strip()
         except (KeyboardInterrupt, EOFError):
             token = ""
 
@@ -312,9 +345,9 @@ async def _run_onboard() -> None:
         cfg.set("gateway.telegram_bot_token", token)
         await cfg.save()
         if not use_existing_token:
-             console.print("[green]✓ telegram bot token saved.[/green]\n")
+            console.print("[green]✓ telegram bot token saved.[/green]\n")
         else:
-             console.print("[green]✓ using existing token.[/green]\n")
+            console.print("[green]✓ using existing token.[/green]\n")
 
         # User ID
         existing_uids = cfg.get("gateway.allowed_users", [])
@@ -324,12 +357,16 @@ async def _run_onboard() -> None:
         if existing_uid:
             console.print(f"[dim]existing allowed user: {existing_uid}[/dim]")
             try:
-                choice = console.input("[bold bright_cyan]keep existing? (Y/n): [/]").strip().lower()
+                choice = (
+                    console.input("[bold bright_cyan]keep existing? (Y/n): [/]")
+                    .strip()
+                    .lower()
+                )
             except (KeyboardInterrupt, EOFError):
                 choice = "y"
             if choice in ("", "y", "yes"):
                 use_existing_uid = True
-                
+
         if not use_existing_uid:
             try:
                 tg_user_id = console.input(
@@ -352,7 +389,9 @@ async def _run_onboard() -> None:
         console.print("[dim]skipped — configure later via `pyclaw config`.[/dim]\n")
 
     # ── Step 5: Workspace + Skills
-    console.print("[bold bright_cyan]step 4/4[/bold bright_cyan] — setting up workspace\n")
+    console.print(
+        "[bold bright_cyan]step 4/4[/bold bright_cyan] — setting up workspace\n"
+    )
 
     workspace = Config.workspace_path(cfg.data)
     workspace.mkdir(parents=True, exist_ok=True)
@@ -371,7 +410,7 @@ async def _run_onboard() -> None:
 
     # ── Gateway Lifecycle
     pid = GatewayManager.get_pid() if GatewayManager.is_running() else None
-    
+
     console.print("\n[bold bright_cyan]gateway management[/bold bright_cyan]")
     if pid:
         console.print(f"  status: [green]RUNNING[/green] (pid {pid})")
@@ -395,7 +434,9 @@ async def _run_onboard() -> None:
         console.print(f"  {msg}", style=color)
     elif gw_action in ("s", "start") and not pid:
         if not cfg.get("gateway.telegram_bot_token"):
-             console.print("  [yellow]warning: no bot token set. gateway may fail.[/yellow]")
+            console.print(
+                "  [yellow]warning: no bot token set. gateway may fail.[/yellow]"
+            )
         ok, msg = GatewayManager.start()
         color = "green" if ok else "red"
         console.print(f"  {msg}", style=color)

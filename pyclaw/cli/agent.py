@@ -80,8 +80,7 @@ async def _stream_events(agent: Agent, events) -> None:
             if len(args_str) > 200:
                 args_str = args_str[:200] + "..."
             console.print(
-                f"  [bold yellow]⚡ {name}[/bold yellow]"
-                f" [dim]{args_str}[/dim]"
+                f"  [bold yellow]⚡ {name}[/bold yellow] [dim]{args_str}[/dim]"
             )
             tool_active = True
 
@@ -127,8 +126,13 @@ async def _run_agent(model: str | None) -> None:
     model_name = agent.model_id
     tool_count = len(agent.tools.tools)
     from pyclaw.agent.identity import SOUL_PATH
+
     has_soul = SOUL_PATH.exists()
-    ai_label = "Claw 🦞" if not has_soul else SOUL_PATH.read_text().split("\n")[0].strip("# ").strip()
+    ai_label = (
+        "Claw 🦞"
+        if not has_soul
+        else SOUL_PATH.read_text().split("\n")[0].strip("# ").strip()
+    )
 
     console.print()
     console.print(
@@ -203,8 +207,14 @@ async def _run_agent(model: str | None) -> None:
 
         if cmd == "/tools":
             for t in agent.tools.tools:
-                confirm = " [yellow]⚠️[/yellow]" if getattr(t, "requires_confirmation", False) else ""
-                console.print(f"  [bold]{t.name}[/bold]{confirm} — [dim]{t.description[:80]}[/dim]")
+                confirm = (
+                    " [yellow]⚠️[/yellow]"
+                    if getattr(t, "requires_confirmation", False)
+                    else ""
+                )
+                console.print(
+                    f"  [bold]{t.name}[/bold]{confirm} — [dim]{t.description[:80]}[/dim]"
+                )
             console.print()
             continue
 

@@ -20,13 +20,9 @@ API spec format:
 from __future__ import annotations
 
 import asyncio
-import json
-import os
-import subprocess
-import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Awaitable, Optional
+from typing import Any, Optional
 
 
 @dataclass
@@ -101,13 +97,13 @@ class ToolRegistry:
         """Return all function declarations for the API request."""
         if not self._tools:
             return []
-        return [{
-            "functionDeclarations": [
-                t.declaration() for t in self._tools.values()
-            ]
-        }]
+        return [
+            {"functionDeclarations": [t.declaration() for t in self._tools.values()]}
+        ]
 
-    async def execute(self, name: str, call_id: str, args: dict[str, Any]) -> ToolResult:
+    async def execute(
+        self, name: str, call_id: str, args: dict[str, Any]
+    ) -> ToolResult:
         """Execute a tool by name and return the result."""
         tool = self._tools.get(name)
         if not tool:
@@ -226,7 +222,9 @@ class ListDirectoryTool(Tool):
         if not p.is_dir():
             return f"Error: not a directory: {p}"
         try:
-            entries = sorted(p.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower()))
+            entries = sorted(
+                p.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower())
+            )
             lines: list[str] = []
             for entry in entries[:200]:
                 prefix = "📁 " if entry.is_dir() else "📄 "
@@ -358,8 +356,10 @@ class GrepTool(Tool):
             },
         )
 
-    async def execute(self, pattern: str, path: str, include: str | None = None, **_: Any) -> str:
-        cmd = f"grep -rn --color=never"
+    async def execute(
+        self, pattern: str, path: str, include: str | None = None, **_: Any
+    ) -> str:
+        cmd = "grep -rn --color=never"
         if include:
             cmd += f" --include='{include}'"
         cmd += f" '{pattern}' '{path}'"
@@ -409,6 +409,7 @@ class SendFileTool(Tool):
 
 
 # ── Default registry ────────────────────────────────────────────────
+
 
 def create_default_registry() -> ToolRegistry:
     """Create a registry with all built-in tools."""
