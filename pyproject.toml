@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyclaw"
+version = "0.1.0"
+description = "Your own personal AI assistant — the Python claw."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+authors = [
+    {name = "void"},
+]
+
+dependencies = [
+    "click>=8.1",
+    "rich>=13.0",
+    "tgram>=1.12",
+    "aiofiles>=24.1",
+    "aiohttp>=3.9",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "pyyaml>=6.0",
+    "prompt_toolkit>=3.0",
+]
+
+[project.scripts]
+pyclaw = "pyclaw.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["pyclaw*"]
+
+[tool.setuptools.package-data]
+"pyclaw" = ["skills/defaults/**/*.md"]
