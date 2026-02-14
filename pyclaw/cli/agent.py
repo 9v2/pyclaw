@@ -74,10 +74,28 @@ async def _stream_events(agent: Agent, events) -> None:
             text_chunks.append(event["text"])
 
         elif etype == "tool_call":
+            name = event["name"]
+            args = event.get("args", {})
+            args_str = json.dumps(args, indent=2) if args else ""
+            if len(args_str) > 200:
+                args_str = args_str[:200] + "..."
+            console.print(
+                f"  [bold yellow]⚡ {name}[/bold yellow]"
+                f" [dim]{args_str}[/dim]"
+            )
             tool_active = True
 
         elif etype == "tool_result":
-            pass
+            name = event["name"]
+            error = event.get("error")
+            result = event.get("result", "")
+            if error:
+                console.print(f"  [red]✗ {name}: {error}[/red]")
+            else:
+                preview = str(result)[:150].replace("\n", " ")
+                if len(str(result)) > 150:
+                    preview += "..."
+                console.print(f"  [green]✓ {name}[/green] [dim]{preview}[/dim]")
 
         elif etype == "confirm":
             pass  # handled by callback
@@ -134,9 +152,15 @@ async def _run_agent(model: str | None) -> None:
             if event["type"] == "text":
                 pass  # accumulate
             elif event["type"] == "tool_call":
-                pass
+                name = event["name"]
+                console.print(f"  [bold yellow]⚡ {name}[/bold yellow]")
             elif event["type"] == "tool_result":
-                pass
+                name = event["name"]
+                error = event.get("error")
+                if error:
+                    console.print(f"  [red]✗ {name}: {error}[/red]")
+                else:
+                    console.print(f"  [green]✓ {name}[/green]")
         # Print the AI's initial response
         last_msg = agent.session.messages[-1] if agent.session.messages else None
         if last_msg and last_msg.role == "assistant" and last_msg.content:

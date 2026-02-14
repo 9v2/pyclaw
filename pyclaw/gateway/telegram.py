@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from tgram import TgBot, filters
-from tgram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from tgram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, ReactionTypeEmoji
 
 from pyclaw.agent.agent import Agent
 from pyclaw.agent.session import Session
@@ -40,13 +40,25 @@ _IMAGE_MIMES = {
     ".bmp": "image/bmp",
 }
 
+# Greeting patterns for auto-reaction
+_GREETINGS = {
+    "hello", "hi", "hey", "hola", "مرحبا", "هلا", "هلاو", "هاي",
+    "أهلا", "السلام", "سلام", "صباح", "مساء", "اهلا", "اهلين",
+    "yo", "sup", "good morning", "good evening",
+}
+
+# Reaction emoji sets
+_GREETING_EMOJIS = ["❤️", "👋", "😊"]
+_COMPLETION_EMOJIS = ["👍", "✅", "❤️"]
+_ERROR_EMOJIS = ["😔"]
+
 
 class TelegramGateway:
     """Telegram ↔ Agent bridge with vision and tool support."""
 
     __slots__ = (
         "_cfg", "_bot", "_sessions", "_agents",
-        "_allowed_users", "_heartbeat",
+        "_allowed_users", "_heartbeat", "_running_tasks",
     )
 
     def __init__(self, cfg: Config, bot: TgBot) -> None:
@@ -56,6 +68,7 @@ class TelegramGateway:
         self._agents: Dict[int, Agent] = {}
         self._allowed_users: list[int] = cfg.get("gateway.allowed_users") or []
         self._heartbeat = Heartbeat(cfg)
+        self._running_tasks: Dict[int, asyncio.Task] = {}
 
     @classmethod
     async def create(cls, cfg: Config) -> "TelegramGateway":
@@ -86,6 +99,7 @@ class TelegramGateway:
                 "send me a message or a photo and i'll respond.\n\n"
                 "commands:\n"
                 "/new — new conversation (clears history)\n"
+                "/stop — stop running task\n"
                 "/reset — factory reset (wipes identity)\n"
                 "/model — show/switch model\n"
                 "/tools — list available tools\n"
@@ -102,6 +116,21 @@ class TelegramGateway:
             if uid in self._sessions:
                 self._sessions[uid].clear()
             await message.reply_text("🗑 session history cleared.")
+
+        @self._bot.on_message(filters.command("stop") & filters.private)
+        async def handle_stop(bot: TgBot, message: Message) -> None:
+            if not self._is_allowed(message.from_user.id):
+                return
+            uid = message.from_user.id
+            agent = self._agents.get(uid)
+            if agent:
+                agent.cancel()
+            task = self._running_tasks.get(uid)
+            if task and not task.done():
+                task.cancel()
+                await message.reply_text("⛔ stopped.")
+            else:
+                await message.reply_text("nothing running.")
 
         @self._bot.on_message(filters.command("reset") & filters.private)
         async def handle_reset(bot: TgBot, message: Message) -> None:
@@ -225,7 +254,6 @@ class TelegramGateway:
                 return
 
             agent = await self._get_or_create_agent(uid)
-            agent = await self._get_or_create_agent(uid)
             typing_task = asyncio.create_task(self._typing_loop(message.chat.id))
 
             try:
@@ -253,7 +281,9 @@ class TelegramGateway:
                     )
 
                     text_chunks: list[str] = []
-                    files_to_send: list[str] = []
+                    tool_lines: list[str] = []
+                    files_to_send: set[str] = set()
+
                     async for event in events:
                         etype = event["type"]
                         if etype == "text":
@@ -262,9 +292,12 @@ class TelegramGateway:
                             if event['name'] in ('write_file', 'send_file'):
                                 path = event.get('args', {}).get('path')
                                 if path:
-                                    files_to_send.append(path)
+                                    files_to_send.add(path)
+                        
                         elif etype == "error":
                             text_chunks.append(f"\n⚠️ {event['message']}")
+
+                    
 
                     # Send response
                     full = "".join(text_chunks)
@@ -296,11 +329,28 @@ class TelegramGateway:
                 return
 
             agent = await self._get_or_create_agent(uid)
-            agent = await self._get_or_create_agent(uid)
+            self._register_reaction_tool(agent, message.chat.id, message.id)
             typing_task = asyncio.create_task(self._typing_loop(message.chat.id))
 
+            # Auto-react on greeting
+            reaction_mode = self._cfg.get("gateway.reaction_mode")
+            if reaction_mode:
+                text_lower = message.text.strip().lower()
+                is_greeting = any(g in text_lower for g in _GREETINGS)
+                if is_greeting or reaction_mode == "massive":
+                    import random
+                    emoji = random.choice(_GREETING_EMOJIS if is_greeting else ["👀", "⚡", "🔥"])
+                    await self._react(message.chat.id, message.id, emoji)
+
+            # Track this as the running task for /stop
+            current_task = asyncio.current_task()
+            if current_task:
+                self._running_tasks[uid] = current_task
+
             text_chunks: list[str] = []
-            files_to_send: list[str] = []
+            tool_lines: list[str] = []
+            files_to_send: set[str] = set()
+
             try:
                 try:
                     async for event in agent.chat(message.text):
@@ -313,7 +363,8 @@ class TelegramGateway:
                             if event['name'] in ('write_file', 'send_file'):
                                 path = event.get('args', {}).get('path')
                                 if path:
-                                    files_to_send.append(path)
+                                    files_to_send.add(path)
+
 
                         elif etype == "error":
                             text_chunks.append(f"\n⚠️ {event['message']}")
@@ -321,6 +372,10 @@ class TelegramGateway:
                 except Exception as exc:
                     logger.exception("agent error for user %d", uid)
                     text_chunks.append(f"⚠️ error: {exc}")
+
+                if tool_lines:
+                    for chunk in self._split_message("\n".join(tool_lines)):
+                        await message.reply_text(chunk, parse_mode="Markdown")
 
                 full = "".join(text_chunks)
                 if full.strip():
@@ -332,11 +387,59 @@ class TelegramGateway:
 
                 for fpath in files_to_send:
                     await self._send_file(message.chat.id, fpath)
+
+                # Auto-react on completion
+                if reaction_mode in ("minimal", "massive") and full.strip():
+                    import random
+                    await self._react(message.chat.id, message.id, random.choice(_COMPLETION_EMOJIS))
             
             finally:
                 typing_task.cancel()
+                self._running_tasks.pop(uid, None)
 
-    # ── File sending ────────────────────────────────────────────────
+    # ── Reactions ─────────────────────────────────────────────────────
+
+    async def _react(self, chat_id: int, message_id: int, emoji: str) -> None:
+        """Silently react to a message with an emoji."""
+        try:
+            await self._bot.set_message_reaction(
+                chat_id=chat_id,
+                message_id=message_id,
+                reaction=[ReactionTypeEmoji(emoji=emoji)],
+            )
+        except Exception as exc:
+            logger.debug("reaction failed: %s", exc)
+
+    def _register_reaction_tool(self, agent: Agent, chat_id: int, message_id: int) -> None:
+        """Register a send_reaction tool on the agent bound to the current message."""
+        from pyclaw.agent.tools import Tool
+
+        gateway = self
+
+        class SendReactionTool(Tool):
+            def __init__(self):
+                super().__init__(
+                    name="send_reaction",
+                    description="React to the user's message with an emoji.",
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "emoji": {
+                                "type": "string",
+                                "description": "Emoji to react with (e.g. ❤️, 👍, 🔥, 😊, ⚡, 👋)",
+                            },
+                        },
+                        "required": ["emoji"],
+                    },
+                )
+                self.hidden = True
+
+            async def execute(self, emoji: str = "👍", **_) -> str:
+                await gateway._react(chat_id, message_id, emoji)
+                return f"Reacted with {emoji}"
+
+        # register() overwrites by name in _tools dict
+        agent.tools.register(SendReactionTool())
 
     async def _send_file(self, chat_id: int, file_path: str) -> None:
         """Send a file as a Telegram document or photo."""
@@ -346,16 +449,19 @@ class TelegramGateway:
 
         try:
             ext = p.suffix.lower()
+            file_buf = io.BytesIO(p.read_bytes())
+            file_buf.name = p.name
+
             if ext in _IMAGE_MIMES:
                 await self._bot.send_photo(
                     chat_id,
-                    photo=p.read_bytes(),
+                    photo=file_buf,
                     caption=f"📷 {p.name}",
                 )
             else:
                 await self._bot.send_document(
                     chat_id,
-                    document=p.read_bytes(),
+                    document=file_buf,
                     caption=f"📄 {p.name}",
                 )
         except Exception as exc:
@@ -405,12 +511,36 @@ class TelegramGateway:
     # ── Run ─────────────────────────────────────────────────────────
 
     async def run(self) -> None:
-        """Start polling + heartbeat. Blocks forever."""
+        """Start polling + heartbeat. Retries on network failures."""
         logger.info("telegram gateway starting…")
         heartbeat_task = asyncio.create_task(self._heartbeat.start())
+
+        delay = 2
+        max_delay = 60
+
         try:
-            # tgram's run() is async, so we await it directly
-            await self._bot.run()
+            while True:
+                try:
+                    await self._bot.run()
+                    break  # clean exit
+                except (
+                    ConnectionError,
+                    OSError,
+                    TimeoutError,
+                    asyncio.TimeoutError,
+                ) as exc:
+                    logger.warning(
+                        "connection lost (%s), retrying in %ds…", exc, delay,
+                    )
+                    await asyncio.sleep(delay)
+                    delay = min(delay * 2, max_delay)
+                except Exception as exc:
+                    logger.error(
+                        "unexpected error (%s: %s), retrying in %ds…",
+                        type(exc).__name__, exc, delay,
+                    )
+                    await asyncio.sleep(delay)
+                    delay = min(delay * 2, max_delay)
         finally:
             self._heartbeat.stop()
             heartbeat_task.cancel()

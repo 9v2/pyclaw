@@ -77,34 +77,22 @@ class WebSearchTool(Tool):
             return f"Search error: {exc}"
 
     async def _perplexity_search(self, query: str) -> str:
-        url = "https://api.perplexity.ai/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {self._api_key}",
-            "Content-Type": "application/json",
-        }
-        body = {
-            "model": "sonar",
-            "messages": [
-                {"role": "user", "content": query}
-            ],
-            "max_tokens": 1024,
-        }
+        import asyncio
+        from openai import OpenAI
+
+        def _sync_search() -> str:
+            client = OpenAI(
+                api_key=self._api_key,
+                base_url="https://api.perplexity.ai",
+            )
+            completion = client.chat.completions.create(
+                model="sonar-pro",
+                messages=[{"role": "user", "content": query}],
+            )
+            return completion.choices[0].message.content
 
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    url, headers=headers, json=body,
-                    timeout=aiohttp.ClientTimeout(total=15),
-                ) as resp:
-                    if resp.status != 200:
-                        return f"Perplexity error ({resp.status})"
-                    data = await resp.json()
-
-            choices = data.get("choices", [])
-            if choices:
-                return choices[0].get("message", {}).get("content", "No response")
-            return "No response from Perplexity"
-
+            return await asyncio.to_thread(_sync_search)
         except Exception as exc:
             return f"Search error: {exc}"
 

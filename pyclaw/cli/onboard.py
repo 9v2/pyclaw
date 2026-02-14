@@ -381,7 +381,7 @@ async def _run_onboard() -> None:
         options = r"\[S]tart / \[I]gnore"
 
     try:
-        gw_action = console.input(f"  [bold bright_cyan]action ({options}): [/]").strip().lower()
+        gw_action = console.input(f"  action ({options}): [/]").strip().lower()
     except (KeyboardInterrupt, EOFError):
         gw_action = "i"
 

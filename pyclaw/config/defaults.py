@@ -25,7 +25,7 @@ DEFAULT_CONFIG: dict = {
         "model_variant": "",
         "system_prompt": None,  # None = use personality-based prompt
         "temperature": 0.7,
-        "max_tokens": 8192,
+        "max_tokens": 1000,
     },
     "personality": {
         "user_name": None,
@@ -39,6 +39,7 @@ DEFAULT_CONFIG: dict = {
         "telegram_bot_token": None,
         "auto_start": False,
         "allowed_users": [],
+        "reaction_mode": None,  # None | "minimal" | "massive"
     },
     "safety": {
         "confirm_destructive": True,

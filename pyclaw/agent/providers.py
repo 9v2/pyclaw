@@ -31,7 +31,7 @@ class Provider(ABC):
         contents: list[dict[str, Any]],
         system_instruction: str | None = None,
         temperature: float = 0.7,
-        max_output_tokens: int = 8192,
+        max_output_tokens: int = 1000,
         tools: list[dict[str, Any]] | None = None,
     ) -> AsyncIterator[dict[str, Any]]:
         """Stream raw candidate/chunk dicts."""
@@ -85,7 +85,7 @@ class AntigravityProvider(Provider):
         contents: list[dict[str, Any]],
         system_instruction: str | None = None,
         temperature: float = 0.7,
-        max_output_tokens: int = 8192,
+        max_output_tokens: int = 1000,
         tools: list[dict[str, Any]] | None = None,
     ) -> AsyncIterator[dict[str, Any]]:
         from pyclaw.agent.antigravity import stream_generate_raw
@@ -218,7 +218,7 @@ class OpenAICompatProvider(Provider):
         contents: list[dict[str, Any]],
         system_instruction: str | None = None,
         temperature: float = 0.7,
-        max_output_tokens: int = 8192,
+        max_output_tokens: int = 1000,
         tools: list[dict[str, Any]] | None = None,
     ) -> AsyncIterator[dict[str, Any]]:
         messages = self._convert_contents(contents, system_instruction)

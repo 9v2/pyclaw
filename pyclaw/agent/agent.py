@@ -15,9 +15,9 @@ from pyclaw.agent.providers import Provider
 from pyclaw.agent.tools import (
     Tool, ToolRegistry, ToolResult, create_default_registry,
 )
-from pyclaw.agent.identity import (
-    build_system_prompt, is_first_boot, FIRST_BOOT_SYSTEM, TOOLS_PATH,
-)
+# from pyclaw.agent.identity import (
+#     build_system_prompt, is_first_boot, FIRST_BOOT_SYSTEM, TOOLS_PATH,
+# )
 from pyclaw.config.config import Config
 from pyclaw.skills.loader import SkillsManager
 
@@ -48,7 +48,7 @@ class Agent:
     __slots__ = (
         "_cfg", "_session", "_skills", "_model_id",
         "_model_variant", "_tools", "_provider",
-        "_confirm_callback",
+        "_confirm_callback", "_cancelled",
     )
 
     def __init__(
@@ -67,6 +67,7 @@ class Agent:
         self._generate_tools_md()
         self._provider = provider or Provider.from_config(cfg)
         self._confirm_callback: Optional[Callable[[str, dict], Awaitable[bool]]] = None
+        self._cancelled = False
 
     # ── Factory ─────────────────────────────────────────────────────
 
@@ -185,7 +186,16 @@ class Agent:
 
     def is_first_boot(self) -> bool:
         """Check if this is the first boot (no SOUL.md yet)."""
+        from pyclaw.agent.identity import is_first_boot
         return is_first_boot()
+
+    def cancel(self) -> None:
+        """Cancel the current operation."""
+        self._cancelled = True
+
+    @property
+    def is_cancelled(self) -> bool:
+        return self._cancelled
 
     # ── Chat with image ─────────────────────────────────────────────
 
@@ -207,8 +217,13 @@ class Agent:
         """Run the generation loop from current session state (no new message added)."""
         tool_declarations = self._tools.declarations() if self._tools.tools else None
         full_text: list[str] = []
+        self._cancelled = False
 
         for round_num in range(MAX_TOOL_ROUNDS):
+            if self._cancelled:
+                yield {"type": "text", "text": "⛔ stopped."}
+                break
+
             contents = self._build_contents()
             text_chunks: list[str] = []
             function_calls: list[dict[str, Any]] = []
@@ -222,9 +237,11 @@ class Agent:
                 contents=contents,
                 system_instruction=await self._build_system_prompt(),
                 temperature=self._cfg.get("agent.temperature", 0.7),
-                max_output_tokens=self._cfg.get("agent.max_tokens", 8192),
+                max_output_tokens=self._cfg.get("agent.max_tokens", 1000),
                 tools=tool_declarations,
             ):
+                if self._cancelled:
+                    break
                 if "error" in candidate:
                     yield {"type": "error", "message": candidate["error"]}
                     return
@@ -236,12 +253,18 @@ class Agent:
                     if "text" in part and not part.get("thought"):
                         text = part["text"]
                         text_chunks.append(text)
-                        full_text.append(text)
-                        yield {"type": "text", "text": text}
                     elif "functionCall" in part:
                         function_calls.append(part["functionCall"])
 
+            if self._cancelled:
+                yield {"type": "text", "text": "⛔ stopped."}
+                break
+
+            # Only yield text on the final round (no more tool calls)
             if not function_calls:
+                for t in text_chunks:
+                    full_text.append(t)
+                    yield {"type": "text", "text": t}
                 break
 
             model_parts: list[dict[str, Any]] = []
@@ -336,8 +359,13 @@ class Agent:
 
         tool_declarations = self._tools.declarations() if self._tools.tools else None
         full_text: list[str] = []
+        self._cancelled = False
 
         for round_num in range(MAX_TOOL_ROUNDS):
+            if self._cancelled:
+                yield {"type": "text", "text": "⛔ stopped."}
+                break
+
             contents = self._build_contents()
 
             text_chunks: list[str] = []
@@ -352,9 +380,11 @@ class Agent:
                 contents=contents,
                 system_instruction=await self._build_system_prompt(),
                 temperature=self._cfg.get("agent.temperature", 0.7),
-                max_output_tokens=self._cfg.get("agent.max_tokens", 8192),
+                max_output_tokens=self._cfg.get("agent.max_tokens", 1000),
                 tools=tool_declarations,
             ):
+                if self._cancelled:
+                    break
                 if "error" in candidate:
                     yield {"type": "error", "message": candidate["error"]}
                     return
@@ -366,13 +396,18 @@ class Agent:
                     if "text" in part and not part.get("thought"):
                         text = part["text"]
                         text_chunks.append(text)
-                        full_text.append(text)
-                        yield {"type": "text", "text": text}
-
                     elif "functionCall" in part:
                         function_calls.append(part["functionCall"])
 
+            if self._cancelled:
+                yield {"type": "text", "text": "⛔ stopped."}
+                break
+
+            # Only yield text on the final round (no more tool calls)
             if not function_calls:
+                for t in text_chunks:
+                    full_text.append(t)
+                    yield {"type": "text", "text": t}
                 break
 
             # Add model response with function calls
@@ -503,6 +538,8 @@ class Agent:
         On first boot, uses the special FIRST_BOOT_SYSTEM prompt
         that instructs the AI to generate its own personality.
         """
+        from pyclaw.agent.identity import FIRST_BOOT_SYSTEM, build_system_prompt
+
         if self.is_first_boot():
             base = FIRST_BOOT_SYSTEM
         else:
@@ -556,6 +593,7 @@ class Agent:
             content += "\n---\n\n"
             
         try:
+            from pyclaw.agent.identity import TOOLS_PATH
             TOOLS_PATH.parent.mkdir(parents=True, exist_ok=True)
             TOOLS_PATH.write_text(content)
         except Exception:

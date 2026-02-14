@@ -37,7 +37,10 @@ async def _install_skill(source: str) -> None:
     workspace = Config.workspace_path(cfg.data)
     mgr = SkillsManager(workspace)
 
-    if source.startswith("http://") or source.startswith("https://"):
+    if source.startswith(("http://", "https://")):
+        if not source.lower().endswith(".md"):
+            console.print("[red]error: skill URL must end in .md[/red]")
+            return
         console.print(f"[dim]downloading from {source}…[/dim]")
         skill = await mgr.install_from_url(source)
     else:

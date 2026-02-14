@@ -40,5 +40,29 @@ async def _main() -> None:
     await gw.run()
 
 
+def main() -> None:
+    """Top-level entry with crash recovery."""
+    max_crashes = 5
+    crash_count = 0
+
+    while crash_count < max_crashes:
+        try:
+            asyncio.run(_main())
+            break  # clean exit
+        except SystemExit:
+            break
+        except KeyboardInterrupt:
+            break
+        except Exception:
+            crash_count += 1
+            logger.exception(
+                "gateway crashed (%d/%d), restarting…",
+                crash_count, max_crashes,
+            )
+            if crash_count >= max_crashes:
+                logger.error("too many crashes, giving up.")
+                sys.exit(1)
+
+
 if __name__ == "__main__":
-    asyncio.run(_main())
+    main()

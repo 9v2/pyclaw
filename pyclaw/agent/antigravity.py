@@ -11,7 +11,7 @@ Request format:
     "model": "{model_id}",
     "request": {
       "contents": [{"role": "user", "parts": [{"text": "..."}]}],
-      "generationConfig": {"maxOutputTokens": 8192, "temperature": 0.7},
+      "generationConfig": {"maxOutputTokens": 1000, "temperature": 0.7},
       "systemInstruction": {"parts": [{"text": "..."}]}
     },
     "userAgent": "antigravity",
@@ -68,7 +68,7 @@ def _build_request_body(
     contents: list[dict[str, Any]],
     system_instruction: str | None = None,
     temperature: float = 0.7,
-    max_output_tokens: int = 8192,
+    max_output_tokens: int = 1000,
     project_id: str | None = None,
     tools: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
@@ -113,7 +113,7 @@ async def stream_generate(
     contents: list[dict[str, Any]],
     system_instruction: str | None = None,
     temperature: float = 0.7,
-    max_output_tokens: int = 8192,
+    max_output_tokens: int = 1000,
     project_id: str | None = None,
     tools: list[dict[str, Any]] | None = None,
 ) -> AsyncIterator[str]:
@@ -180,7 +180,7 @@ async def stream_generate_raw(
     contents: list[dict[str, Any]],
     system_instruction: str | None = None,
     temperature: float = 0.7,
-    max_output_tokens: int = 8192,
+    max_output_tokens: int = 1000,
     project_id: str | None = None,
     tools: list[dict[str, Any]] | None = None,
 ) -> AsyncIterator[dict[str, Any]]:
@@ -243,7 +243,7 @@ async def generate(
     contents: list[dict[str, Any]],
     system_instruction: str | None = None,
     temperature: float = 0.7,
-    max_output_tokens: int = 8192,
+    max_output_tokens: int = 1000,
     project_id: str | None = None,
 ) -> str:
     """Non-streaming generation — returns the full response text."""
