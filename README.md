@@ -189,6 +189,18 @@ pyclaw/
 - **allowed users** — restrict telegram bot to specific user IDs
 - **safe commands** — whitelist for auto-approved commands (`ls`, `cat`, `echo`, etc.)
 
+## 🤝 contributing
+
+Contributions are welcome! Feel free to open issues, suggest features, or submit pull requests.
+
+1. Fork the repo
+2. Create your branch (`git checkout -b feature/cool-thing`)
+3. Commit your changes (`git commit -m 'add cool thing'`)
+4. Push to the branch (`git push origin feature/cool-thing`)
+5. Open a Pull Request
+
+If you find PyClaw useful, give it a ⭐ — it helps others discover the project!
+
 ## 📄 license
 
 [MIT](LICENSE)
