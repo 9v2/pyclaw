@@ -293,6 +293,8 @@ class UpdateIdentityTool(Tool):
                 await write_daily_note(content)
                 return "Appended to today's daily note."
             else:
+                if path is None:
+                    return f"Unknown identity file: {file}"
                 # Basic append for others
                 import aiofiles
 
@@ -306,11 +308,14 @@ class UpdateIdentityTool(Tool):
                 today = datetime.date.today().isoformat()
                 path = MEMORY_DIR / f"{today}.md"
 
+            if path is None:
+                return f"Unknown identity file: {file}"
+
             import aiofiles
 
             async with aiofiles.open(path, "w") as f:
                 await f.write(content)
-            return f"Updated {path.name if path else file} successfully."
+            return f"Updated {path.name} successfully."
 
 
 class LogMemoryTool(Tool):
